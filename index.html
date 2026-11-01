@@ -124,7 +124,7 @@ details.sec>summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ac
     <button class="tab" role="tab" data-m="cloze" aria-selected="false">語句問題<span class="sub">解答文の穴埋め</span></button>
     <button class="tab" role="tab" data-m="list" aria-selected="false">一覧・検索<span class="sub">全問題を確認</span></button>
   </div>
-  <div class="bar"><div class="meter" id="meter" aria-hidden="true"></div><span class="stat" id="stat"></span></div>
+  <div class="bar"><div class="meter" id="meter" aria-hidden="true"></div><span class="stat" id="stat"></span><button class="btn" id="shuf" style="padding:3px 12px;font-size:13px">シャッフル</button></div>
   <details class="filters" id="filters"><summary>出題範囲を絞り込む(<span id="fcount"></span>)</summary>
     <div class="fgrid">
       <div class="frow"><span class="lab">章</span><span id="fchap" class="frow"></span></div>
@@ -283,7 +283,7 @@ function renderList(){
 
 /* ---------- main ---------- */
 function render(){
-  meter();
+  meter();$("#shuf").hidden=st.mode==="list";
   if(st.mode==="list"){renderList();return}
   const id=st.queue[st.pos];
   if(!id){$("#main").innerHTML=`<div class="card empty">この条件に合う問題がありません。絞り込みを変更してください。</div>`;return}
@@ -305,6 +305,7 @@ function initFilters(){
   $("#fstat").onchange=e=>{st.stat=e.target.value;buildQueue();render()};
   $("#ford").onchange=e=>{st.ord=e.target.value;buildQueue();render()};
 }
+$("#shuf").onclick=()=>{st.ord="rand";syncFilters();buildQueue();render();scrollTop()};
 $("#total").textContent=DATA.length;
 initFilters();syncFilters();buildQueue();render();
 </script>
