@@ -153,7 +153,7 @@ details.sec>summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ac
 .brow .bp{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .brow .bbar{grid-column:1/-1;height:6px;border-radius:3px;background:var(--surface2);display:flex;overflow:hidden}
 .brow .bbar i{display:block;height:100%}
-#testbar{margin-top:10px}
+#testbar,#reviewbar{margin-top:10px}
 .testcard{background:var(--accent-soft);border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13.5px}
 .sumrow{display:grid;grid-template-columns:3.6em 1fr auto;gap:8px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:5px;cursor:pointer}
 </style>
@@ -167,6 +167,7 @@ details.sec>summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ac
     <button class="tab" role="tab" data-m="list" aria-selected="false">一覧・検索<span class="sub">全問題を確認</span></button>
   </div>
   <div class="bar"><div class="meter" id="meter" aria-hidden="true"></div><span class="stat" id="stat"></span><button class="btn" id="shuf" style="padding:3px 12px;font-size:13px">シャッフル</button><button class="btn" id="test" style="padding:3px 12px;font-size:13px">ミニテスト</button></div>
+  <div class="stat" id="histbar" style="margin-top:6px"></div>
   <details class="filters" id="filters"><summary>出題範囲を絞り込む(<span id="fcount"></span>)</summary>
     <div class="fgrid">
       <div class="frow"><span class="lab">章</span><span id="fchap" class="frow"></span></div>
@@ -180,6 +181,7 @@ details.sec>summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ac
   </details>
   <details class="filters" id="board"><summary>章ごとの進捗</summary><div class="fgrid"><p class="hint" style="margin:0">今のモード（記述／語句）の成績です。章をタップすると、その章だけに絞り込みます。</p><div id="bgrid"></div></div></details>
   <div id="testbar"></div>
+  <div id="reviewbar"></div>
 </header>
 <main id="main"></main>
 <p class="foot">出典:管理会計論 論文対策集−理論①②(2026年目標)。問題文・解答・キーワード・ロジカルフローを収録し、解説は本文のみ、図表・表は省略しています。成績はこのブラウザに保存されます。<br><button class="linkbtn" id="exp">成績を書き出す（バックアップ）</button>／<button class="linkbtn" id="imp">成績を読み込む</button><input type="file" id="impf" accept="application/json,.json" hidden></p>
@@ -193,10 +195,10 @@ const KEY="kanri-ichimon-v1";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const norm=s=>String(s).normalize("NFKC").replace(/[\s　]+/g,"").replace(/[，、,]/g,"").toLowerCase();
-let st={mode:"write",chaps:new Set(),imps:new Set(),stat:"all",ord:"seq",queue:[],pos:0,prog:{write:{},cloze:{}},search:"",drafts:{},test:null};
+let st={mode:"write",chaps:new Set(),imps:new Set(),stat:"all",ord:"seq",queue:[],pos:0,prog:{write:{},cloze:{}},search:"",drafts:{},test:null,review:null,when:{write:{},cloze:{}},days:{}};
 let savedSess=null;
-try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s&&s.prog){st.prog.write=s.prog.write||{};st.prog.cloze=s.prog.cloze||{};if(s.drafts&&typeof s.drafts==="object")st.drafts=s.drafts;if(s.sess&&typeof s.sess==="object")savedSess=s.sess;}}catch(e){}
-function save(){try{const sess=(st.test&&st.test.active)?null:{mode:st.mode,chaps:[...st.chaps],imps:[...st.imps],stat:st.stat,ord:st.ord,search:st.search,queue:st.queue.slice(),pos:st.pos,cur:st.queue[st.pos]||null};localStorage.setItem(KEY,JSON.stringify({prog:st.prog,drafts:st.drafts,sess}))}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s&&s.prog){st.prog.write=s.prog.write||{};st.prog.cloze=s.prog.cloze||{};if(s.drafts&&typeof s.drafts==="object")st.drafts=s.drafts;if(s.when&&typeof s.when==="object"){st.when.write=s.when.write||{};st.when.cloze=s.when.cloze||{}}if(s.days&&typeof s.days==="object")st.days=s.days;if(s.sess&&typeof s.sess==="object")savedSess=s.sess;}}catch(e){}
+function save(){try{const sess=((st.test&&st.test.active)||(st.review&&st.review.active))?null:{mode:st.mode,chaps:[...st.chaps],imps:[...st.imps],stat:st.stat,ord:st.ord,search:st.search,queue:st.queue.slice(),pos:st.pos,cur:st.queue[st.pos]||null};localStorage.setItem(KEY,JSON.stringify({prog:st.prog,drafts:st.drafts,when:st.when,days:st.days,sess}))}catch(e){}}
 const byId=Object.fromEntries(DATA.map(d=>[d.id,d]));
 const isHd=p=>/^[①-⑳][^。]{0,50}$/.test(p);
 function kwRe(ks){const a=[...ks].sort((x,y)=>y.length-x.length).map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));return a.length?new RegExp("("+a.join("|")+")","g"):null}
@@ -205,6 +207,7 @@ function kwRe(ks){const a=[...ks].sort((x,y)=>y.length-x.length).map(k=>k.replac
 function prog(id){return st.prog[st.mode==="list"?"write":st.mode][id]||""}
 function buildQueue(){
   if(st.test&&st.test.active){st.queue=st.test.ids.slice();if(st.pos>=st.queue.length)st.pos=Math.max(0,st.queue.length-1);$("#fcount").textContent="対象 "+st.queue.length+"問";return}
+  if(st.review&&st.review.active){st.queue=st.review.ids.slice();if(st.pos>=st.queue.length)st.pos=Math.max(0,st.queue.length-1);$("#fcount").textContent="対象 "+st.queue.length+"問";return}
   const m=st.mode==="cloze"?"cloze":"write";
   let q=DATA.filter(d=>(!st.chaps.size||st.chaps.has(d.c))&&(!st.imps.size||st.imps.has(d.i)));
   q=q.filter(d=>{const g=st.prog[m][d.id]||"";return st.stat==="all"||(st.stat==="unseen"&&!g)||(st.stat==="review"&&(g==="t"||g==="x"))||(st.stat==="done"&&g==="o")});
@@ -218,7 +221,16 @@ function meter(){
   const n=DATA.length;
   $("#meter").innerHTML=`<i class="m-o" style="width:${o/n*100}%"></i><i class="m-t" style="width:${t/n*100}%"></i><i class="m-x" style="width:${x/n*100}%"></i>`;
   $("#stat").textContent=`○${o}  △${t}  ×${x}  未${n-o-t-x}`;
-  renderBoard(m);
+  renderBoard(m);renderHist();
+}
+function renderHist(){
+  const h=$("#histbar");if(!h)return;
+  const days=st.days||{};const t=todayStr();
+  const todayN=days[t]?Object.keys(days[t]).length:0;
+  let streak=0;let cur=t;if(!(days[cur]&&Object.keys(days[cur]).length))cur=addDays(t,-1);
+  while(days[cur]&&Object.keys(days[cur]).length){streak++;cur=addDays(cur,-1)}
+  const totalDays=Object.keys(days).filter(k=>days[k]&&Object.keys(days[k]).length).length;
+  h.textContent=totalDays?`学習記録：今日 ${todayN}問 ・ 連続 ${streak}日 ・ 解答した日 ${totalDays}日`:"";
 }
 function renderBoard(m){
   const g=$("#bgrid");if(!g)return;
@@ -230,9 +242,12 @@ function renderBoard(m){
     h+=`<button class="brow" data-c="${c}"><span class="bc">第${c}章 ${esc(CH[c])}</span><span class="bp">○${o} △${tt} ×${x} 未${n-done}（解答済み ${n?Math.round(done/n*100):0}%）</span><span class="bbar"><i class="m-o" style="width:${n?o/n*100:0}%"></i><i class="m-t" style="width:${n?tt/n*100:0}%"></i><i class="m-x" style="width:${n?x/n*100:0}%"></i></span></button>`;
   });
   g.innerHTML=h;
-  g.querySelectorAll(".brow").forEach(b=>b.onclick=()=>{st.test=null;st.chaps=new Set([+b.dataset.c]);syncFilters();buildQueue();render();scrollTop()});
+  g.querySelectorAll(".brow").forEach(b=>b.onclick=()=>{st.test=null;st.review=null;st.chaps=new Set([+b.dataset.c]);syncFilters();buildQueue();render();scrollTop()});
 }
-function setGrade(id,g){const m=st.mode==="cloze"?"cloze":"write";if(st.prog[m][id]===g)delete st.prog[m][id];else st.prog[m][id]=g;save();meter();renderTestbar();}
+function todayStr(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function addDays(s,n){const[a,b,c]=s.split("-").map(Number);const d=new Date(a,b-1,c+n);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function noteGrade(m,id,g){st.when[m][id]={g,d:todayStr()};const t=todayStr();(st.days[t]=st.days[t]||{})[(m==="write"?"w":"c")+":"+id]=1}
+function setGrade(id,g){const m=st.mode==="cloze"?"cloze":"write";if(st.prog[m][id]===g){delete st.prog[m][id];delete st.when[m][id]}else{st.prog[m][id]=g;noteGrade(m,id,g)}save();meter();renderTestbar();renderReviewbar();}
 
 /* ---------- shared pieces ---------- */
 function head(d){return `<div class="crumb"><span class="pid">問題${esc(d.id)}</span><span>第${d.c}章 ${esc(CH[d.c])}</span><span class="badge ${d.i==="A"?"hi":""}">重要度${d.i}</span><span class="badge">典型度${d.y}</span></div><h2 class="ptitle">${esc(d.t)}</h2>`}
@@ -313,7 +328,7 @@ function renderCloze(d){
     $("#res").innerHTML=`<div class="result ${r===1?"good":r>=.5?"mid":"low"}">${ok} / ${total} 正解${r===1?" ・ 完答です":""}</div>`;
     if(ok<total)$("#res").innerHTML+=`<p class="hint">不一致の空欄は赤字で正解を示しています。「答えを見る」ですべて表示します。表記ゆれ(全角・半角など)は区別しません。</p>`;
     reveal();
-    if(!st.prog.cloze[d.id]){st.prog.cloze[d.id]=r===1?"o":r>=.5?"t":"x";save();meter();renderTestbar();document.querySelectorAll(".grade .btn").forEach(x=>x.setAttribute("aria-pressed",String(prog(d.id)===x.dataset.g)))}
+    if(!st.prog.cloze[d.id]){st.prog.cloze[d.id]=r===1?"o":r>=.5?"t":"x";noteGrade("cloze",d.id,st.prog.cloze[d.id]);save();meter();renderTestbar();renderReviewbar();document.querySelectorAll(".grade .btn").forEach(x=>x.setAttribute("aria-pressed",String(prog(d.id)===x.dataset.g)))}
   };
   $("#rev").onclick=()=>{
     M.order.forEach((w,k)=>{const b=document.querySelector(`.bl[data-k="${k}"]`);b.classList.remove("ng");b.classList.add("ok");$("#b"+k).value=w;$("#b"+k).size=Math.max(3,Math.min(w.length+1,24))});
@@ -342,6 +357,31 @@ function renderList(){
 }
 
 /* ---------- main ---------- */
+function dueList(m){
+  const t=todayStr();const out=[];
+  DATA.forEach(d=>{const g=st.prog[m][d.id];if(!g)return;const w=st.when[m][d.id];const due=(!w||!w.d)?t:addDays(w.d,g==="x"?1:g==="t"?3:7);if(due<=t)out.push({id:d.id,due})});
+  out.sort((a,b)=>a.due<b.due?-1:a.due>b.due?1:0);
+  return out.map(o=>o.id);
+}
+function startReview(m){
+  const ids=dueList(m);if(!ids.length)return;
+  st.test=null;st.review={active:true,ids,mode:m};setMode(m);st.queue=ids.slice();st.pos=0;render();scrollTop();
+}
+function renderReviewbar(){
+  const rb=$("#reviewbar");if(!rb)return;
+  if(st.review&&st.review.active){
+    const R=st.review;const due=dueList(R.mode);const remain=R.ids.filter(id=>due.includes(id)).length;
+    rb.innerHTML=`<div class="testcard"><b>復習中</b><span>${R.mode==="write"?"記述":"語句"} ${Math.min(st.pos+1,R.ids.length)} / ${R.ids.length}問目 ・ 残り ${remain}問</span>${remain===0?'<span><b>今日の分は完了です</b></span>':""}<button class="btn" id="rexit">やめる</button></div>`;
+    $("#rexit").onclick=()=>{st.review=null;buildQueue();render();scrollTop()};
+    return;
+  }
+  const dw=dueList("write"),dc=dueList("cloze");
+  if(!dw.length&&!dc.length){rb.innerHTML="";return}
+  rb.innerHTML=`<div class="testcard"><b>今日の復習</b><span>記述 ${dw.length}問 ・ 語句 ${dc.length}問</span>${dw.length?'<button class="btn" id="rstartw">記述で復習</button>':""}${dc.length?'<button class="btn" id="rstartc">語句で復習</button>':""}</div>`;
+  const sw=$("#rstartw"),sc=$("#rstartc");
+  if(sw)sw.onclick=()=>startReview("write");
+  if(sc)sc.onclick=()=>startReview("cloze");
+}
 function renderTestbar(){
   const tb=$("#testbar");if(!tb)return;
   if(!(st.test&&st.test.active)){tb.innerHTML="";return}
@@ -362,6 +402,7 @@ function showTestResult(){
   scrollTop();
 }
 function startTest(){
+  st.review=null;
   const scope=DATA.filter(d=>(!st.chaps.size||st.chaps.has(d.c))&&(!st.imps.size||st.imps.has(d.i)));
   if(!scope.length){alert("対象の問題がありません。絞り込みを変更してください。");return}
   const pool=scope.slice();const ids=[];
@@ -371,7 +412,7 @@ function startTest(){
   st.test={active:true,ids,mode};setMode(mode);st.queue=ids.slice();st.pos=0;render();scrollTop();
 }
 function render(){
-  meter();$("#shuf").hidden=st.mode==="list";$("#test").hidden=st.mode==="list"||!!(st.test&&st.test.active);renderTestbar();
+  meter();$("#shuf").hidden=st.mode==="list";$("#test").hidden=st.mode==="list"||!!(st.test&&st.test.active);renderTestbar();renderReviewbar();
   if(st.mode==="list"){renderList();save();return}
   const id=st.queue[st.pos];
   if(!id){$("#main").innerHTML=`<div class="card empty">この条件に合う問題がありません。絞り込みを変更してください。</div>`;return}
@@ -380,7 +421,7 @@ function render(){
   save();
 }
 function setMode(m){st.mode=m;document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.m===m)))}
-document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{st.test=null;setMode(t.dataset.m);buildQueue();render();});
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{st.test=null;st.review=null;setMode(t.dataset.m);buildQueue();render();});
 function syncFilters(){
   document.querySelectorAll("#fchap .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.c==="all"?!st.chaps.size:st.chaps.has(+c.dataset.c))));
   document.querySelectorAll("#fimp .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.i==="all"?!st.imps.size:st.imps.has(c.dataset.i))));
@@ -412,7 +453,7 @@ document.addEventListener("click",e=>{const i=e.target.closest(".flow img,.past 
 $("#shuf").onclick=()=>{st.ord="rand";syncFilters();buildQueue();render();scrollTop()};
 $("#test").onclick=()=>startTest();
 $("#exp").onclick=()=>{
-  const payload={app:"kanri-ichimon",version:1,exportedAt:new Date().toISOString(),prog:st.prog,drafts:st.drafts};
+  const payload={app:"kanri-ichimon",version:1,exportedAt:new Date().toISOString(),prog:st.prog,drafts:st.drafts,when:st.when,days:st.days};
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(payload)],{type:"application/json"}));a.download="kanri-progress.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 };
 const impf=$("#impf");
@@ -426,9 +467,11 @@ impf.onchange=()=>{
     const clean={write:{},cloze:{}};
     ["write","cloze"].forEach(m=>{const src=s.prog[m]||{};Object.keys(src).forEach(id=>{if(byId[id]&&["o","t","x"].includes(src[id]))clean[m][id]=src[id]})});
     const dc={};if(s.drafts&&typeof s.drafts==="object")Object.keys(s.drafts).forEach(id=>{if(byId[id]&&typeof s.drafts[id]==="string")dc[id]=s.drafts[id].slice(0,20000)});
+    const cleanWhen={write:{},cloze:{}};if(s.when&&typeof s.when==="object")["write","cloze"].forEach(m=>{const src=s.when[m]||{};Object.keys(src).forEach(id=>{const v=src[id];if(byId[id]&&v&&["o","t","x"].includes(v.g)&&/^\d{4}-\d{2}-\d{2}$/.test(v.d||""))cleanWhen[m][id]={g:v.g,d:v.d}})});
+    const cleanDays={};if(s.days&&typeof s.days==="object")Object.keys(s.days).forEach(dy=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(dy))return;const src=s.days[dy]||{};const o={};Object.keys(src).forEach(k=>{const mm=k.match(/^([wc]):(.+)$/);if(mm&&byId[mm[2]])o[k]=1});if(Object.keys(o).length)cleanDays[dy]=o});
     const cnt=Object.keys(clean.write).length+Object.keys(clean.cloze).length;
     if(!confirm(`成績 ${cnt}件を読み込んで、今の成績に上書きします。よろしいですか？`))return;
-    st.prog=clean;st.drafts=dc;st.test=null;save();buildQueue();render();alert("読み込みました。");
+    st.prog=clean;st.drafts=dc;st.when=cleanWhen;st.days=cleanDays;st.test=null;st.review=null;save();buildQueue();render();alert("読み込みました。");
   }catch(e){alert("読み込めませんでした：ファイルが壊れているようです。")}};
   r.readAsText(f);impf.value="";
 };
