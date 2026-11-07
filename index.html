@@ -163,6 +163,7 @@ details.sec>summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ac
   <div class="brand"><h1>管理会計論 論文対策集 一問一答</h1><small>理論①②・全<span id="total"></span>問</small></div>
   <div class="tabs" role="tablist" id="tabs">
     <button class="tab" role="tab" data-m="write" aria-selected="true">記述問題<span class="sub">答案を書いて照合</span></button>
+    <button class="tab" role="tab" data-m="flash" aria-selected="false">カード<span class="sub">タップで答えを表示</span></button>
     <button class="tab" role="tab" data-m="cloze" aria-selected="false">語句問題<span class="sub">解答文の穴埋め</span></button>
     <button class="tab" role="tab" data-m="list" aria-selected="false">一覧・検索<span class="sub">全問題を確認</span></button>
   </div>
@@ -179,7 +180,7 @@ details.sec>summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ac
       </div>
     </div>
   </details>
-  <details class="filters" id="board"><summary>章ごとの進捗</summary><div class="fgrid"><p class="hint" style="margin:0">今のモード（記述／語句）の成績です。章をタップすると、その章だけに絞り込みます。</p><div id="bgrid"></div></div></details>
+  <details class="filters" id="board"><summary>章ごとの進捗</summary><div class="fgrid"><p class="hint" style="margin:0">今のモード（記述／語句／カード）の成績です。章をタップすると、その章だけに絞り込みます。</p><div id="bgrid"></div></div></details>
   <div id="testbar"></div>
   <div id="reviewbar"></div>
 </header>
@@ -195,9 +196,9 @@ const KEY="kanri-ichimon-v1";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const norm=s=>String(s).normalize("NFKC").replace(/[\s　]+/g,"").replace(/[，、,]/g,"").toLowerCase();
-let st={mode:"write",chaps:new Set(),imps:new Set(),stat:"all",ord:"seq",queue:[],pos:0,prog:{write:{},cloze:{}},search:"",drafts:{},test:null,review:null,when:{write:{},cloze:{}},days:{}};
+let st={mode:"write",chaps:new Set(),imps:new Set(),stat:"all",ord:"seq",queue:[],pos:0,prog:{write:{},cloze:{},flash:{}},search:"",drafts:{},test:null,review:null,when:{write:{},cloze:{},flash:{}},days:{}};
 let savedSess=null;
-try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s&&s.prog){st.prog.write=s.prog.write||{};st.prog.cloze=s.prog.cloze||{};if(s.drafts&&typeof s.drafts==="object")st.drafts=s.drafts;if(s.when&&typeof s.when==="object"){st.when.write=s.when.write||{};st.when.cloze=s.when.cloze||{}}if(s.days&&typeof s.days==="object")st.days=s.days;if(s.sess&&typeof s.sess==="object")savedSess=s.sess;}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s&&s.prog){st.prog.write=s.prog.write||{};st.prog.cloze=s.prog.cloze||{};st.prog.flash=s.prog.flash||{};if(s.drafts&&typeof s.drafts==="object")st.drafts=s.drafts;if(s.when&&typeof s.when==="object"){st.when.write=s.when.write||{};st.when.cloze=s.when.cloze||{};st.when.flash=s.when.flash||{}}if(s.days&&typeof s.days==="object")st.days=s.days;if(s.sess&&typeof s.sess==="object")savedSess=s.sess;}}catch(e){}
 function save(){try{const sess=((st.test&&st.test.active)||(st.review&&st.review.active))?null:{mode:st.mode,chaps:[...st.chaps],imps:[...st.imps],stat:st.stat,ord:st.ord,search:st.search,queue:st.queue.slice(),pos:st.pos,cur:st.queue[st.pos]||null};localStorage.setItem(KEY,JSON.stringify({prog:st.prog,drafts:st.drafts,when:st.when,days:st.days,sess}))}catch(e){}}
 const byId=Object.fromEntries(DATA.map(d=>[d.id,d]));
 const isHd=p=>/^[①-⑳][^。]{0,50}$/.test(p);
@@ -208,7 +209,7 @@ function prog(id){return st.prog[st.mode==="list"?"write":st.mode][id]||""}
 function buildQueue(){
   if(st.test&&st.test.active){st.queue=st.test.ids.slice();if(st.pos>=st.queue.length)st.pos=Math.max(0,st.queue.length-1);$("#fcount").textContent="対象 "+st.queue.length+"問";return}
   if(st.review&&st.review.active){st.queue=st.review.ids.slice();if(st.pos>=st.queue.length)st.pos=Math.max(0,st.queue.length-1);$("#fcount").textContent="対象 "+st.queue.length+"問";return}
-  const m=st.mode==="cloze"?"cloze":"write";
+  const m=st.mode==="list"?"write":st.mode;
   let q=DATA.filter(d=>(!st.chaps.size||st.chaps.has(d.c))&&(!st.imps.size||st.imps.has(d.i)));
   q=q.filter(d=>{const g=st.prog[m][d.id]||"";return st.stat==="all"||(st.stat==="unseen"&&!g)||(st.stat==="review"&&(g==="t"||g==="x"))||(st.stat==="done"&&g==="o")});
   if(st.ord==="rand"){for(let i=q.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[q[i],q[j]]=[q[j],q[i]]}}
@@ -216,7 +217,7 @@ function buildQueue(){
   $("#fcount").textContent="対象 "+q.length+"問";
 }
 function meter(){
-  const m=st.mode==="cloze"?"cloze":"write";let o=0,t=0,x=0;
+  const m=st.mode==="list"?"write":st.mode;let o=0,t=0,x=0;
   DATA.forEach(d=>{const g=st.prog[m][d.id];if(g==="o")o++;else if(g==="t")t++;else if(g==="x")x++});
   const n=DATA.length;
   $("#meter").innerHTML=`<i class="m-o" style="width:${o/n*100}%"></i><i class="m-t" style="width:${t/n*100}%"></i><i class="m-x" style="width:${x/n*100}%"></i>`;
@@ -246,8 +247,8 @@ function renderBoard(m){
 }
 function todayStr(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function addDays(s,n){const[a,b,c]=s.split("-").map(Number);const d=new Date(a,b-1,c+n);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
-function noteGrade(m,id,g){st.when[m][id]={g,d:todayStr()};const t=todayStr();(st.days[t]=st.days[t]||{})[(m==="write"?"w":"c")+":"+id]=1}
-function setGrade(id,g){const m=st.mode==="cloze"?"cloze":"write";if(st.prog[m][id]===g){delete st.prog[m][id];delete st.when[m][id]}else{st.prog[m][id]=g;noteGrade(m,id,g)}save();meter();renderTestbar();renderReviewbar();}
+function noteGrade(m,id,g){st.when[m][id]={g,d:todayStr()};const t=todayStr();(st.days[t]=st.days[t]||{})[(m==="write"?"w":m==="cloze"?"c":"f")+":"+id]=1}
+function setGrade(id,g){const m=st.mode==="list"?"write":st.mode;if(st.prog[m][id]===g){delete st.prog[m][id];delete st.when[m][id]}else{st.prog[m][id]=g;noteGrade(m,id,g)}save();meter();renderTestbar();renderReviewbar();}
 
 /* ---------- shared pieces ---------- */
 function head(d){return `<div class="crumb"><span class="pid">問題${esc(d.id)}</span><span>第${d.c}章 ${esc(CH[d.c])}</span><span class="badge ${d.i==="A"?"hi":""}">重要度${d.i}</span><span class="badge">典型度${d.y}</span></div><h2 class="ptitle">${esc(d.t)}</h2>`}
@@ -283,6 +284,20 @@ function renderWrite(d){
     if(my&&d.k.length){const hit=d.k.filter(k=>my.includes(norm(k)));
       chk=`<div class="sec"><h3>キーワード照合:${hit.length} / ${d.k.length}</h3><div class="kwchips">${d.k.map(k=>`<span class="kc ${my.includes(norm(k))?"hit":"miss"}">${my.includes(norm(k))?"✓":"✗"} ${esc(k)}</span>`).join("")}</div></div>`}
     $("#reveal").innerHTML=`<div class="sec"><h3>模範解答</h3><div class="doc">${answerHtml(d,re)}</div></div>${chk}${imgs(d)}${extras(d)}${gradeBar(d.id)}`;
+    $("#show").disabled=true;bindGrade(d.id);
+  };
+}
+
+/* ---------- flash mode ---------- */
+function renderFlash(d){
+  $("#main").innerHTML=`<div class="card">${head(d)}${qbox(d)}
+  <p class="hint">頭の中で答えを思い浮かべてから、タップで模範解答を開きます。</p>
+  <div class="actions"><button class="btn primary" id="show">答えを見る</button></div>
+  <div id="reveal"></div></div>${nav()}`;
+  bindNav();
+  $("#show").onclick=()=>{
+    const re=kwRe(d.k);
+    $("#reveal").innerHTML=`<div class="sec"><h3>模範解答</h3><div class="doc">${answerHtml(d,re)}</div></div>${imgs(d)}${extras(d)}${gradeBar(d.id)}`;
     $("#show").disabled=true;bindGrade(d.id);
   };
 }
@@ -371,22 +386,23 @@ function renderReviewbar(){
   const rb=$("#reviewbar");if(!rb)return;
   if(st.review&&st.review.active){
     const R=st.review;const due=dueList(R.mode);const remain=R.ids.filter(id=>due.includes(id)).length;
-    rb.innerHTML=`<div class="testcard"><b>復習中</b><span>${R.mode==="write"?"記述":"語句"} ${Math.min(st.pos+1,R.ids.length)} / ${R.ids.length}問目 ・ 残り ${remain}問</span>${remain===0?'<span><b>今日の分は完了です</b></span>':""}<button class="btn" id="rexit">やめる</button></div>`;
+    rb.innerHTML=`<div class="testcard"><b>復習中</b><span>${R.mode==="write"?"記述":R.mode==="cloze"?"語句":"カード"} ${Math.min(st.pos+1,R.ids.length)} / ${R.ids.length}問目 ・ 残り ${remain}問</span>${remain===0?'<span><b>今日の分は完了です</b></span>':""}<button class="btn" id="rexit">やめる</button></div>`;
     $("#rexit").onclick=()=>{st.review=null;buildQueue();render();scrollTop()};
     return;
   }
-  const dw=dueList("write"),dc=dueList("cloze");
-  if(!dw.length&&!dc.length){rb.innerHTML="";return}
-  rb.innerHTML=`<div class="testcard"><b>今日の復習</b><span>記述 ${dw.length}問 ・ 語句 ${dc.length}問</span>${dw.length?'<button class="btn" id="rstartw">記述で復習</button>':""}${dc.length?'<button class="btn" id="rstartc">語句で復習</button>':""}</div>`;
-  const sw=$("#rstartw"),sc=$("#rstartc");
+  const dw=dueList("write"),dc=dueList("cloze"),df=dueList("flash");
+  if(!dw.length&&!dc.length&&!df.length){rb.innerHTML="";return}
+  rb.innerHTML=`<div class="testcard"><b>今日の復習</b><span>記述 ${dw.length}問 ・ 語句 ${dc.length}問 ・ カード ${df.length}問</span>${dw.length?'<button class="btn" id="rstartw">記述で復習</button>':""}${dc.length?'<button class="btn" id="rstartc">語句で復習</button>':""}${df.length?'<button class="btn" id="rstartf">カードで復習</button>':""}</div>`;
+  const sw=$("#rstartw"),sc=$("#rstartc"),sf=$("#rstartf");
   if(sw)sw.onclick=()=>startReview("write");
   if(sc)sc.onclick=()=>startReview("cloze");
+  if(sf)sf.onclick=()=>startReview("flash");
 }
 function renderTestbar(){
   const tb=$("#testbar");if(!tb)return;
   if(!(st.test&&st.test.active)){tb.innerHTML="";return}
   const T=st.test;const graded=T.ids.filter(id=>st.prog[T.mode][id]).length;
-  tb.innerHTML=`<div class="testcard"><b>ミニテスト</b><span>${T.mode==="write"?"記述":"語句"} ${Math.min(st.pos+1,T.ids.length)} / ${T.ids.length}問目 ・ 採点済み ${graded}問</span>${graded>=T.ids.length?'<span><b>全問採点済みです</b></span>':""}<button class="btn" id="tres">結果を見る</button><button class="btn" id="texit">やめる</button></div>`;
+  tb.innerHTML=`<div class="testcard"><b>ミニテスト</b><span>${T.mode==="write"?"記述":T.mode==="cloze"?"語句":"カード"} ${Math.min(st.pos+1,T.ids.length)} / ${T.ids.length}問目 ・ 採点済み ${graded}問</span>${graded>=T.ids.length?'<span><b>全問採点済みです</b></span>':""}<button class="btn" id="tres">結果を見る</button><button class="btn" id="texit">やめる</button></div>`;
   $("#tres").onclick=showTestResult;
   $("#texit").onclick=()=>{st.test=null;buildQueue();render();scrollTop()};
 }
@@ -395,7 +411,7 @@ function showTestResult(){
   let o=0,tt=0,x=0,u=0;
   const rows=T.ids.map(id=>{const d=byId[id];const gv=st.prog[T.mode][id]||"";if(gv==="o")o++;else if(gv==="t")tt++;else if(gv==="x")x++;else u++;
     return `<button class="sumrow" data-id="${id}"><span class="no">${esc(id)}</span><span class="t">${esc(d.t)}</span><span class="dot ${gv}">${gv?{o:"○",t:"△",x:"×"}[gv]:"未"}</span></button>`}).join("");
-  $("#main").innerHTML=`<div class="card"><h2 class="ptitle">ミニテスト結果（${T.mode==="write"?"記述":"語句"}・${T.ids.length}問）</h2><div class="result ${o>=tt+x+u?"good":o>0?"mid":"low"}">○ ${o} ・ △ ${tt} ・ × ${x}${u?` ・ 未採点 ${u}`:""}</div><div style="margin-top:12px">${rows}</div><p class="hint">問題をタップすると、その問題を開きます（テストは終了します）。</p><div class="actions"><button class="btn primary" id="tagain">もう一度（新しい${T.ids.length}問）</button><button class="btn" id="tback">通常モードに戻る</button></div></div>`;
+  $("#main").innerHTML=`<div class="card"><h2 class="ptitle">ミニテスト結果（${T.mode==="write"?"記述":T.mode==="cloze"?"語句":"カード"}・${T.ids.length}問）</h2><div class="result ${o>=tt+x+u?"good":o>0?"mid":"low"}">○ ${o} ・ △ ${tt} ・ × ${x}${u?` ・ 未採点 ${u}`:""}</div><div style="margin-top:12px">${rows}</div><p class="hint">問題をタップすると、その問題を開きます（テストは終了します）。</p><div class="actions"><button class="btn primary" id="tagain">もう一度（新しい${T.ids.length}問）</button><button class="btn" id="tback">通常モードに戻る</button></div></div>`;
   document.querySelectorAll(".sumrow").forEach(b=>b.onclick=()=>{const id=b.dataset.id;st.test=null;setMode(T.mode);st.chaps=new Set();st.imps=new Set();st.stat="all";st.ord="seq";syncFilters();buildQueue();st.pos=st.queue.indexOf(id);render();scrollTop()});
   $("#tagain").onclick=()=>startTest();
   $("#tback").onclick=()=>{st.test=null;buildQueue();render();scrollTop()};
@@ -408,7 +424,7 @@ function startTest(){
   const pool=scope.slice();const ids=[];
   const n=Math.min(10,pool.length);
   for(let i=0;i<n;i++){ids.push(pool.splice(Math.random()*pool.length|0,1)[0].id)}
-  const mode=st.mode==="cloze"?"cloze":"write";
+  const mode=["write","cloze","flash"].includes(st.mode)?st.mode:"write";
   st.test={active:true,ids,mode};setMode(mode);st.queue=ids.slice();st.pos=0;render();scrollTop();
 }
 function render(){
@@ -417,7 +433,7 @@ function render(){
   const id=st.queue[st.pos];
   if(!id){$("#main").innerHTML=`<div class="card empty">この条件に合う問題がありません。絞り込みを変更してください。</div>`;return}
   const d=byId[id];
-  st.mode==="write"?renderWrite(d):renderCloze(d);
+  st.mode==="write"?renderWrite(d):st.mode==="flash"?renderFlash(d):renderCloze(d);
   save();
 }
 function setMode(m){st.mode=m;document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.m===m)))}
@@ -464,11 +480,11 @@ impf.onchange=()=>{
   r.onload=()=>{try{
     const s=JSON.parse(String(r.result));
     if(!s||typeof s.prog!=="object"||!s.prog){alert("読み込めませんでした：成績データの形式が違うようです。");return}
-    const clean={write:{},cloze:{}};
-    ["write","cloze"].forEach(m=>{const src=s.prog[m]||{};Object.keys(src).forEach(id=>{if(byId[id]&&["o","t","x"].includes(src[id]))clean[m][id]=src[id]})});
+    const clean={write:{},cloze:{},flash:{}};
+    ["write","cloze","flash"].forEach(m=>{const src=s.prog[m]||{};Object.keys(src).forEach(id=>{if(byId[id]&&["o","t","x"].includes(src[id]))clean[m][id]=src[id]})});
     const dc={};if(s.drafts&&typeof s.drafts==="object")Object.keys(s.drafts).forEach(id=>{if(byId[id]&&typeof s.drafts[id]==="string")dc[id]=s.drafts[id].slice(0,20000)});
-    const cleanWhen={write:{},cloze:{}};if(s.when&&typeof s.when==="object")["write","cloze"].forEach(m=>{const src=s.when[m]||{};Object.keys(src).forEach(id=>{const v=src[id];if(byId[id]&&v&&["o","t","x"].includes(v.g)&&/^\d{4}-\d{2}-\d{2}$/.test(v.d||""))cleanWhen[m][id]={g:v.g,d:v.d}})});
-    const cleanDays={};if(s.days&&typeof s.days==="object")Object.keys(s.days).forEach(dy=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(dy))return;const src=s.days[dy]||{};const o={};Object.keys(src).forEach(k=>{const mm=k.match(/^([wc]):(.+)$/);if(mm&&byId[mm[2]])o[k]=1});if(Object.keys(o).length)cleanDays[dy]=o});
+    const cleanWhen={write:{},cloze:{},flash:{}};if(s.when&&typeof s.when==="object")["write","cloze","flash"].forEach(m=>{const src=s.when[m]||{};Object.keys(src).forEach(id=>{const v=src[id];if(byId[id]&&v&&["o","t","x"].includes(v.g)&&/^\d{4}-\d{2}-\d{2}$/.test(v.d||""))cleanWhen[m][id]={g:v.g,d:v.d}})});
+    const cleanDays={};if(s.days&&typeof s.days==="object")Object.keys(s.days).forEach(dy=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(dy))return;const src=s.days[dy]||{};const o={};Object.keys(src).forEach(k=>{const mm=k.match(/^([wcf]):(.+)$/);if(mm&&byId[mm[2]])o[k]=1});if(Object.keys(o).length)cleanDays[dy]=o});
     const cnt=Object.keys(clean.write).length+Object.keys(clean.cloze).length;
     if(!confirm(`成績 ${cnt}件を読み込んで、今の成績に上書きします。よろしいですか？`))return;
     st.prog=clean;st.drafts=dc;st.when=cleanWhen;st.days=cleanDays;st.test=null;st.review=null;save();buildQueue();render();alert("読み込みました。");
@@ -478,7 +494,7 @@ impf.onchange=()=>{
 $("#total").textContent=DATA.length;
 initFilters();
 if(savedSess){
-  if(["write","cloze","list"].includes(savedSess.mode))st.mode=savedSess.mode;
+  if(["write","cloze","flash","list"].includes(savedSess.mode))st.mode=savedSess.mode;
   if(Array.isArray(savedSess.chaps))st.chaps=new Set(savedSess.chaps.filter(c=>CH[c]));
   if(Array.isArray(savedSess.imps))st.imps=new Set(savedSess.imps.filter(i=>["A","B","C"].includes(i)));
   if(["all","unseen","review","done"].includes(savedSess.stat))st.stat=savedSess.stat;
