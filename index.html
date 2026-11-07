@@ -147,6 +147,15 @@ details.sec>summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ac
 #lb .lbbar .btn{background:#f7ead7;color:#1d130a;border-color:#f7ead7;min-height:40px;padding:6px 12px;white-space:nowrap}
 #lb .lbscroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:0 8px calc(16px + env(safe-area-inset-bottom,0px))}
 #lb img{display:block;width:min(860px,max(640px,calc(100vw - 16px)));max-width:none;height:auto;background:#fff;border-radius:6px}
+.brow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:5px;cursor:pointer}
+.brow:hover{border-color:var(--accent)}
+.brow .bc{font-weight:700;font-size:13.5px}
+.brow .bp{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.brow .bbar{grid-column:1/-1;height:6px;border-radius:3px;background:var(--surface2);display:flex;overflow:hidden}
+.brow .bbar i{display:block;height:100%}
+#testbar{margin-top:10px}
+.testcard{background:var(--accent-soft);border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13.5px}
+.sumrow{display:grid;grid-template-columns:3.6em 1fr auto;gap:8px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:5px;cursor:pointer}
 </style>
 
 <div class="wrap">
@@ -157,7 +166,7 @@ details.sec>summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ac
     <button class="tab" role="tab" data-m="cloze" aria-selected="false">語句問題<span class="sub">解答文の穴埋め</span></button>
     <button class="tab" role="tab" data-m="list" aria-selected="false">一覧・検索<span class="sub">全問題を確認</span></button>
   </div>
-  <div class="bar"><div class="meter" id="meter" aria-hidden="true"></div><span class="stat" id="stat"></span><button class="btn" id="shuf" style="padding:3px 12px;font-size:13px">シャッフル</button></div>
+  <div class="bar"><div class="meter" id="meter" aria-hidden="true"></div><span class="stat" id="stat"></span><button class="btn" id="shuf" style="padding:3px 12px;font-size:13px">シャッフル</button><button class="btn" id="test" style="padding:3px 12px;font-size:13px">ミニテスト</button></div>
   <details class="filters" id="filters"><summary>出題範囲を絞り込む(<span id="fcount"></span>)</summary>
     <div class="fgrid">
       <div class="frow"><span class="lab">章</span><span id="fchap" class="frow"></span></div>
@@ -169,9 +178,11 @@ details.sec>summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ac
       </div>
     </div>
   </details>
+  <details class="filters" id="board"><summary>章ごとの進捗</summary><div class="fgrid"><p class="hint" style="margin:0">今のモード（記述／語句）の成績です。章をタップすると、その章だけに絞り込みます。</p><div id="bgrid"></div></div></details>
+  <div id="testbar"></div>
 </header>
 <main id="main"></main>
-<p class="foot">出典:管理会計論 論文対策集−理論①②(2026年目標)。問題文・解答・キーワード・ロジカルフローを収録し、解説は本文のみ、図表・表は省略しています。成績はこのブラウザに保存されます。</p>
+<p class="foot">出典:管理会計論 論文対策集−理論①②(2026年目標)。問題文・解答・キーワード・ロジカルフローを収録し、解説は本文のみ、図表・表は省略しています。成績はこのブラウザに保存されます。<br><button class="linkbtn" id="exp">成績を書き出す（バックアップ）</button>／<button class="linkbtn" id="imp">成績を読み込む</button><input type="file" id="impf" accept="application/json,.json" hidden></p>
 </div>
 
 <script>
@@ -182,9 +193,10 @@ const KEY="kanri-ichimon-v1";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const norm=s=>String(s).normalize("NFKC").replace(/[\s　]+/g,"").replace(/[，、,]/g,"").toLowerCase();
-let st={mode:"write",chaps:new Set(),imps:new Set(),stat:"all",ord:"seq",queue:[],pos:0,prog:{write:{},cloze:{}},search:""};
-try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s&&s.prog){st.prog.write=s.prog.write||{};st.prog.cloze=s.prog.cloze||{};}}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({prog:st.prog}))}catch(e){}}
+let st={mode:"write",chaps:new Set(),imps:new Set(),stat:"all",ord:"seq",queue:[],pos:0,prog:{write:{},cloze:{}},search:"",drafts:{},test:null};
+let savedSess=null;
+try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s&&s.prog){st.prog.write=s.prog.write||{};st.prog.cloze=s.prog.cloze||{};if(s.drafts&&typeof s.drafts==="object")st.drafts=s.drafts;if(s.sess&&typeof s.sess==="object")savedSess=s.sess;}}catch(e){}
+function save(){try{const sess=(st.test&&st.test.active)?null:{mode:st.mode,chaps:[...st.chaps],imps:[...st.imps],stat:st.stat,ord:st.ord,search:st.search,queue:st.queue.slice(),pos:st.pos,cur:st.queue[st.pos]||null};localStorage.setItem(KEY,JSON.stringify({prog:st.prog,drafts:st.drafts,sess}))}catch(e){}}
 const byId=Object.fromEntries(DATA.map(d=>[d.id,d]));
 const isHd=p=>/^[①-⑳][^。]{0,50}$/.test(p);
 function kwRe(ks){const a=[...ks].sort((x,y)=>y.length-x.length).map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));return a.length?new RegExp("("+a.join("|")+")","g"):null}
@@ -192,6 +204,7 @@ function kwRe(ks){const a=[...ks].sort((x,y)=>y.length-x.length).map(k=>k.replac
 /* ---------- queue ---------- */
 function prog(id){return st.prog[st.mode==="list"?"write":st.mode][id]||""}
 function buildQueue(){
+  if(st.test&&st.test.active){st.queue=st.test.ids.slice();if(st.pos>=st.queue.length)st.pos=Math.max(0,st.queue.length-1);$("#fcount").textContent="対象 "+st.queue.length+"問";return}
   const m=st.mode==="cloze"?"cloze":"write";
   let q=DATA.filter(d=>(!st.chaps.size||st.chaps.has(d.c))&&(!st.imps.size||st.imps.has(d.i)));
   q=q.filter(d=>{const g=st.prog[m][d.id]||"";return st.stat==="all"||(st.stat==="unseen"&&!g)||(st.stat==="review"&&(g==="t"||g==="x"))||(st.stat==="done"&&g==="o")});
@@ -205,8 +218,21 @@ function meter(){
   const n=DATA.length;
   $("#meter").innerHTML=`<i class="m-o" style="width:${o/n*100}%"></i><i class="m-t" style="width:${t/n*100}%"></i><i class="m-x" style="width:${x/n*100}%"></i>`;
   $("#stat").textContent=`○${o}  △${t}  ×${x}  未${n-o-t-x}`;
+  renderBoard(m);
 }
-function setGrade(id,g){const m=st.mode==="cloze"?"cloze":"write";if(st.prog[m][id]===g)delete st.prog[m][id];else st.prog[m][id]=g;save();meter();}
+function renderBoard(m){
+  const g=$("#bgrid");if(!g)return;
+  let h="";
+  Object.keys(CH).forEach(c=>{
+    const ds=DATA.filter(d=>d.c===+c);const n=ds.length;let o=0,tt=0,x=0;
+    ds.forEach(d=>{const v=st.prog[m][d.id];if(v==="o")o++;else if(v==="t")tt++;else if(v==="x")x++});
+    const done=o+tt+x;
+    h+=`<button class="brow" data-c="${c}"><span class="bc">第${c}章 ${esc(CH[c])}</span><span class="bp">○${o} △${tt} ×${x} 未${n-done}（解答済み ${n?Math.round(done/n*100):0}%）</span><span class="bbar"><i class="m-o" style="width:${n?o/n*100:0}%"></i><i class="m-t" style="width:${n?tt/n*100:0}%"></i><i class="m-x" style="width:${n?x/n*100:0}%"></i></span></button>`;
+  });
+  g.innerHTML=h;
+  g.querySelectorAll(".brow").forEach(b=>b.onclick=()=>{st.test=null;st.chaps=new Set([+b.dataset.c]);syncFilters();buildQueue();render();scrollTop()});
+}
+function setGrade(id,g){const m=st.mode==="cloze"?"cloze":"write";if(st.prog[m][id]===g)delete st.prog[m][id];else st.prog[m][id]=g;save();meter();renderTestbar();}
 
 /* ---------- shared pieces ---------- */
 function head(d){return `<div class="crumb"><span class="pid">問題${esc(d.id)}</span><span>第${d.c}章 ${esc(CH[d.c])}</span><span class="badge ${d.i==="A"?"hi":""}">重要度${d.i}</span><span class="badge">典型度${d.y}</span></div><h2 class="ptitle">${esc(d.t)}</h2>`}
@@ -235,6 +261,7 @@ function renderWrite(d){
   <div class="actions"><button class="btn primary" id="show">答えを見る</button></div>
   <div id="reveal"></div></div>${nav()}`;
   bindNav();
+  const ta=$("#my");if(ta){if(st.drafts[d.id])ta.value=st.drafts[d.id];ta.addEventListener("input",()=>{if(ta.value)st.drafts[d.id]=ta.value;else delete st.drafts[d.id];save()});}
   $("#show").onclick=()=>{
     const my=norm($("#my").value);const re=kwRe(d.k);
     let chk="";
@@ -286,7 +313,7 @@ function renderCloze(d){
     $("#res").innerHTML=`<div class="result ${r===1?"good":r>=.5?"mid":"low"}">${ok} / ${total} 正解${r===1?" ・ 完答です":""}</div>`;
     if(ok<total)$("#res").innerHTML+=`<p class="hint">不一致の空欄は赤字で正解を示しています。「答えを見る」ですべて表示します。表記ゆれ(全角・半角など)は区別しません。</p>`;
     reveal();
-    if(!st.prog.cloze[d.id]){st.prog.cloze[d.id]=r===1?"o":r>=.5?"t":"x";save();meter();document.querySelectorAll(".grade .btn").forEach(x=>x.setAttribute("aria-pressed",String(prog(d.id)===x.dataset.g)))}
+    if(!st.prog.cloze[d.id]){st.prog.cloze[d.id]=r===1?"o":r>=.5?"t":"x";save();meter();renderTestbar();document.querySelectorAll(".grade .btn").forEach(x=>x.setAttribute("aria-pressed",String(prog(d.id)===x.dataset.g)))}
   };
   $("#rev").onclick=()=>{
     M.order.forEach((w,k)=>{const b=document.querySelector(`.bl[data-k="${k}"]`);b.classList.remove("ng");b.classList.add("ok");$("#b"+k).value=w;$("#b"+k).size=Math.max(3,Math.min(w.length+1,24))});
@@ -315,16 +342,45 @@ function renderList(){
 }
 
 /* ---------- main ---------- */
+function renderTestbar(){
+  const tb=$("#testbar");if(!tb)return;
+  if(!(st.test&&st.test.active)){tb.innerHTML="";return}
+  const T=st.test;const graded=T.ids.filter(id=>st.prog[T.mode][id]).length;
+  tb.innerHTML=`<div class="testcard"><b>ミニテスト</b><span>${T.mode==="write"?"記述":"語句"} ${Math.min(st.pos+1,T.ids.length)} / ${T.ids.length}問目 ・ 採点済み ${graded}問</span>${graded>=T.ids.length?'<span><b>全問採点済みです</b></span>':""}<button class="btn" id="tres">結果を見る</button><button class="btn" id="texit">やめる</button></div>`;
+  $("#tres").onclick=showTestResult;
+  $("#texit").onclick=()=>{st.test=null;buildQueue();render();scrollTop()};
+}
+function showTestResult(){
+  const T=st.test;if(!T)return;
+  let o=0,tt=0,x=0,u=0;
+  const rows=T.ids.map(id=>{const d=byId[id];const gv=st.prog[T.mode][id]||"";if(gv==="o")o++;else if(gv==="t")tt++;else if(gv==="x")x++;else u++;
+    return `<button class="sumrow" data-id="${id}"><span class="no">${esc(id)}</span><span class="t">${esc(d.t)}</span><span class="dot ${gv}">${gv?{o:"○",t:"△",x:"×"}[gv]:"未"}</span></button>`}).join("");
+  $("#main").innerHTML=`<div class="card"><h2 class="ptitle">ミニテスト結果（${T.mode==="write"?"記述":"語句"}・${T.ids.length}問）</h2><div class="result ${o>=tt+x+u?"good":o>0?"mid":"low"}">○ ${o} ・ △ ${tt} ・ × ${x}${u?` ・ 未採点 ${u}`:""}</div><div style="margin-top:12px">${rows}</div><p class="hint">問題をタップすると、その問題を開きます（テストは終了します）。</p><div class="actions"><button class="btn primary" id="tagain">もう一度（新しい${T.ids.length}問）</button><button class="btn" id="tback">通常モードに戻る</button></div></div>`;
+  document.querySelectorAll(".sumrow").forEach(b=>b.onclick=()=>{const id=b.dataset.id;st.test=null;setMode(T.mode);st.chaps=new Set();st.imps=new Set();st.stat="all";st.ord="seq";syncFilters();buildQueue();st.pos=st.queue.indexOf(id);render();scrollTop()});
+  $("#tagain").onclick=()=>startTest();
+  $("#tback").onclick=()=>{st.test=null;buildQueue();render();scrollTop()};
+  scrollTop();
+}
+function startTest(){
+  const scope=DATA.filter(d=>(!st.chaps.size||st.chaps.has(d.c))&&(!st.imps.size||st.imps.has(d.i)));
+  if(!scope.length){alert("対象の問題がありません。絞り込みを変更してください。");return}
+  const pool=scope.slice();const ids=[];
+  const n=Math.min(10,pool.length);
+  for(let i=0;i<n;i++){ids.push(pool.splice(Math.random()*pool.length|0,1)[0].id)}
+  const mode=st.mode==="cloze"?"cloze":"write";
+  st.test={active:true,ids,mode};setMode(mode);st.queue=ids.slice();st.pos=0;render();scrollTop();
+}
 function render(){
-  meter();$("#shuf").hidden=st.mode==="list";
-  if(st.mode==="list"){renderList();return}
+  meter();$("#shuf").hidden=st.mode==="list";$("#test").hidden=st.mode==="list"||!!(st.test&&st.test.active);renderTestbar();
+  if(st.mode==="list"){renderList();save();return}
   const id=st.queue[st.pos];
   if(!id){$("#main").innerHTML=`<div class="card empty">この条件に合う問題がありません。絞り込みを変更してください。</div>`;return}
   const d=byId[id];
   st.mode==="write"?renderWrite(d):renderCloze(d);
+  save();
 }
 function setMode(m){st.mode=m;document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.m===m)))}
-document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{setMode(t.dataset.m);buildQueue();render();});
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{st.test=null;setMode(t.dataset.m);buildQueue();render();});
 function syncFilters(){
   document.querySelectorAll("#fchap .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.c==="all"?!st.chaps.size:st.chaps.has(+c.dataset.c))));
   document.querySelectorAll("#fimp .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.i==="all"?!st.imps.size:st.imps.has(c.dataset.i))));
@@ -354,8 +410,43 @@ function openZoom(src){
 }
 document.addEventListener("click",e=>{const i=e.target.closest(".flow img,.past img");if(i)openZoom(i.src)});
 $("#shuf").onclick=()=>{st.ord="rand";syncFilters();buildQueue();render();scrollTop()};
+$("#test").onclick=()=>startTest();
+$("#exp").onclick=()=>{
+  const payload={app:"kanri-ichimon",version:1,exportedAt:new Date().toISOString(),prog:st.prog,drafts:st.drafts};
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(payload)],{type:"application/json"}));a.download="kanri-progress.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+};
+const impf=$("#impf");
+$("#imp").onclick=()=>impf.click();
+impf.onchange=()=>{
+  const f=impf.files&&impf.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{
+    const s=JSON.parse(String(r.result));
+    if(!s||typeof s.prog!=="object"||!s.prog){alert("読み込めませんでした：成績データの形式が違うようです。");return}
+    const clean={write:{},cloze:{}};
+    ["write","cloze"].forEach(m=>{const src=s.prog[m]||{};Object.keys(src).forEach(id=>{if(byId[id]&&["o","t","x"].includes(src[id]))clean[m][id]=src[id]})});
+    const dc={};if(s.drafts&&typeof s.drafts==="object")Object.keys(s.drafts).forEach(id=>{if(byId[id]&&typeof s.drafts[id]==="string")dc[id]=s.drafts[id].slice(0,20000)});
+    const cnt=Object.keys(clean.write).length+Object.keys(clean.cloze).length;
+    if(!confirm(`成績 ${cnt}件を読み込んで、今の成績に上書きします。よろしいですか？`))return;
+    st.prog=clean;st.drafts=dc;st.test=null;save();buildQueue();render();alert("読み込みました。");
+  }catch(e){alert("読み込めませんでした：ファイルが壊れているようです。")}};
+  r.readAsText(f);impf.value="";
+};
 $("#total").textContent=DATA.length;
-initFilters();syncFilters();buildQueue();render();
+initFilters();
+if(savedSess){
+  if(["write","cloze","list"].includes(savedSess.mode))st.mode=savedSess.mode;
+  if(Array.isArray(savedSess.chaps))st.chaps=new Set(savedSess.chaps.filter(c=>CH[c]));
+  if(Array.isArray(savedSess.imps))st.imps=new Set(savedSess.imps.filter(i=>["A","B","C"].includes(i)));
+  if(["all","unseen","review","done"].includes(savedSess.stat))st.stat=savedSess.stat;
+  if(["seq","rand"].includes(savedSess.ord))st.ord=savedSess.ord;
+  if(typeof savedSess.search==="string")st.search=savedSess.search;
+  setMode(st.mode);syncFilters();
+  const q=savedSess.queue;
+  if(Array.isArray(q)&&q.length&&q.every(id=>byId[id])){st.queue=q.slice();st.pos=Math.min(Math.max(0,savedSess.pos|0),q.length-1);$("#fcount").textContent="対象 "+q.length+"問"}
+  else{buildQueue();if(savedSess.cur&&st.queue.includes(savedSess.cur))st.pos=st.queue.indexOf(savedSess.cur)}
+  render();
+}else{syncFilters();buildQueue();render();}
 </script>
 
 </body></html>
