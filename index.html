@@ -157,11 +157,21 @@ details.sec>summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ac
 #testbar,#reviewbar{margin-top:10px}
 .testcard{background:var(--accent-soft);border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13.5px}
 .sumrow{display:grid;grid-template-columns:3.6em 1fr auto;gap:8px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:5px;cursor:pointer}
+
+/* layout: slim header, compact sticky tabs/bar, card first */
+header.top{position:static}
+.stickybar{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--bg);padding:6px 0;border-bottom:1px solid var(--line)}
+.stickybar .tabs{margin-top:0}
+.stickybar .bar{margin-top:6px}
+.stickybar #testbar,.stickybar #reviewbar{margin-top:6px}
+.tools{margin-top:18px}
 </style>
 
 <div class="wrap">
 <header class="top">
   <div class="brand"><h1>管理会計論 論文対策集 一問一答</h1><small>理論①②・全<span id="total"></span>問</small></div>
+</header>
+<div class="stickybar">
   <div class="tabs" role="tablist" id="tabs">
     <button class="tab" role="tab" data-m="write" aria-selected="true">記述問題<span class="sub">答案を書いて照合</span></button>
     <button class="tab" role="tab" data-m="flash" aria-selected="false">カード<span class="sub">タップで答えを表示</span></button>
@@ -169,6 +179,12 @@ details.sec>summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ac
     <button class="tab" role="tab" data-m="list" aria-selected="false">一覧・検索<span class="sub">全問題を確認</span></button>
   </div>
   <div class="bar"><div class="meter" id="meter" aria-hidden="true"></div><span class="stat" id="stat"></span><button class="btn" id="shuf" style="padding:3px 12px;font-size:13px">シャッフル</button><button class="btn" id="test" style="padding:3px 12px;font-size:13px">ミニテスト</button></div>
+  <div id="testbar"></div>
+  <div id="reviewbar"></div>
+</div>
+
+<main id="main"></main>
+<div class="tools">
   <div class="stat" id="histbar" style="margin-top:6px"></div>
   <div id="savewarn" role="alert"></div><div class="stat" id="testhist" style="margin-top:2px"></div>
   <details class="filters" id="filters"><summary>出題範囲を絞り込む(<span id="fcount"></span>)</summary>
@@ -183,10 +199,8 @@ details.sec>summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ac
     </div>
   </details>
   <details class="filters" id="board"><summary>章ごとの進捗</summary><div class="fgrid"><p class="hint" style="margin:0">各章に記述／語句／カードの成績を併記しています（上の段とバーは今のモード）。章をタップすると、その章だけに絞り込みます。</p><div id="bgrid"></div></div></details>
-  <div id="testbar"></div>
-  <div id="reviewbar"></div>
-</header>
-<main id="main"></main>
+</div>
+
 <p class="foot">出典:管理会計論 論文対策集−理論①②(2026年目標)。問題文・解答・キーワード・ロジカルフローを収録し、解説は本文のみ、図表・表は省略しています。成績はこのブラウザに保存されます。<br><button class="linkbtn" id="exp">成績を書き出す（バックアップ）</button>／<button class="linkbtn" id="imp">成績を読み込む</button><input type="file" id="impf" accept="application/json,.json" hidden></p>
 </div>
 
