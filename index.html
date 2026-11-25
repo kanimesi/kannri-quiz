@@ -165,43 +165,123 @@ header.top{position:static}
 .stickybar .bar{margin-top:6px}
 .stickybar #testbar,.stickybar #reviewbar{margin-top:6px}
 .tools{margin-top:18px}
+/* ===== layout unify 2026-11-26: zaimu-style panel layout (theme colors unchanged) ===== */
+header.top{position:static;text-align:center;padding:20px 8px 14px;border-bottom:0}
+header.top .eyebrow{font-size:11px;letter-spacing:.28em;color:var(--accent);font-weight:700;margin-bottom:8px}
+header.top h1{font-family:var(--f-doc);font-size:22px;margin:0 0 6px;letter-spacing:.02em}
+header.top p.sub{margin:0;font-size:12.5px;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 6px 24px rgba(120,60,10,.08);margin-top:14px}
+.panel .field-label{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted);margin:0 0 8px 2px}
+.progress-row{display:flex;align-items:center;gap:10px}
+.progress-row .meter{flex:1}
+.progress-count{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.study-record{display:flex;gap:8px 18px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--muted)}
+.study-record b{color:var(--ink);font-size:15px}
+.tools-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.tool-btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:9px 14px;font-weight:700;font-size:13.5px;min-height:40px}
+.tool-btn.due-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tool-btn.danger{color:var(--bad)}
+.tool-btn:disabled{opacity:.45;cursor:default}
+.summary-panel #reviewbar{margin-top:10px}
+.summary-panel #reviewbar:empty{margin-top:0}
+.filter-head{display:flex;align-items:center;gap:10px;padding-top:12px;padding-bottom:12px}
+.filter-toggle{background:none;border:0;font-weight:700;font-size:14px;color:var(--accent);padding:4px 2px}
+.filter-summary{font-size:12.5px;color:var(--muted)}
+#filterPanel .fgrid{margin-top:0;padding:0;background:none;border:0;border-radius:0}
+#testbar{margin-top:14px}
+#testbar:empty{margin-top:0}
+.card-panel{padding:14px}
+.card-panel .tabs{margin-top:0}
+.card-panel main{margin-top:14px}
+.stat-legend{font-size:13.5px;color:var(--muted)}
+#histbar{font-size:12.5px;color:var(--muted);margin-top:6px}
+#testhist{font-size:12.5px;color:var(--muted);margin-top:2px}
+.board-hint{font-size:12.5px;color:var(--muted);margin:0 0 8px}
+.reset-row{margin-top:14px;text-align:right}
+footer.note{margin-top:18px;font-size:12px;color:var(--muted);line-height:1.8;padding:0 2px}
+@media (max-width:600px){
+  header.top{padding:16px 4px 10px}
+  header.top h1{font-size:19px}
+  .panel{padding:14px 12px}
+  .card-panel{padding:12px 10px 14px}
+  .card-panel main{margin-top:12px}
+  .tool-btn{min-height:44px}
+}
 </style>
 
 <div class="wrap">
 <header class="top">
-  <div class="brand"><h1>管理会計論 論文対策集 一問一答</h1><small>理論①②・全<span id="total"></span>問</small></div>
+  <div class="eyebrow">CPA · 管理会計論（理論）</div>
+  <h1>管理会計論 論文対策集 一問一答</h1>
+  <p class="sub">論文対策集 理論①②・全<span id="total"></span>問収録</p>
 </header>
-<div class="stickybar">
+
+<section class="panel summary-panel" id="summaryPanel">
+  <div class="field-label">今日のまとめ</div>
+  <div class="progress-row"><div class="meter" id="meter" aria-hidden="true"></div><div class="progress-count" id="progressCount">0 / 208</div></div>
+  <div class="study-record" id="studyRecord">
+    <span>今日解いた数 <b id="studyToday">0</b></span>
+    <span>連続学習日数 <b id="studyStreak">0</b>日</span>
+    <span>復習期限が来た問題 <b id="studyDue">0</b></span>
+  </div>
+  <div class="tools-row">
+    <button class="tool-btn due-primary" id="btnDue" type="button">📅 今日の復習（<span id="dueCount">0</span>）</button>
+    <button class="tool-btn" id="btnResume" type="button" hidden>▶ 続きから再開</button>
+  </div>
+  <div id="reviewbar"></div>
+  <div id="savewarn" role="alert"></div>
+</section>
+
+<div class="panel filter-head" id="filterHead">
+  <button class="filter-toggle" id="filterToggle" type="button" aria-expanded="false" aria-controls="filterPanel">🔍 絞り込み</button>
+  <div class="filter-summary" id="filterSummary"></div>
+</div>
+<section class="panel" id="filterPanel" hidden>
+  <div class="fgrid">
+    <div class="frow"><span class="lab">章</span><span id="fchap" class="frow"></span></div>
+    <div class="frow"><span class="lab">重要度</span><span id="fimp" class="frow"></span></div>
+    <div class="frow"><span class="lab">状態</span>
+      <select id="fstat" aria-label="状態"><option value="all">すべて</option><option value="unseen">未回答</option><option value="review">要復習(△・×)</option><option value="done">○のみ</option></select>
+      <span class="lab" style="width:auto;margin-left:8px">順序</span>
+      <select id="ford" aria-label="順序"><option value="seq">問題番号順</option><option value="rand">ランダム</option></select>
+    </div>
+    <div class="stat" id="fcount"></div>
+  </div>
+</section>
+
+<div id="testbar"></div>
+
+<section class="panel card-panel" id="cardPanel">
   <div class="tabs" role="tablist" id="tabs">
     <button class="tab" role="tab" data-m="write" aria-selected="true">記述問題<span class="sub">答案を書いて照合</span></button>
     <button class="tab" role="tab" data-m="flash" aria-selected="false">カード<span class="sub">タップで答えを表示</span></button>
     <button class="tab" role="tab" data-m="cloze" aria-selected="false">語句問題<span class="sub">解答文の穴埋め</span></button>
     <button class="tab" role="tab" data-m="list" aria-selected="false">一覧・検索<span class="sub">全問題を確認</span></button>
   </div>
-  <div class="bar"><div class="meter" id="meter" aria-hidden="true"></div><span class="stat" id="stat"></span><button class="btn" id="shuf" style="padding:3px 12px;font-size:13px">シャッフル</button><button class="btn" id="test" style="padding:3px 12px;font-size:13px">ミニテスト</button></div>
-  <div id="testbar"></div>
-  <div id="reviewbar"></div>
-</div>
+  <main id="main"></main>
+</section>
 
-<main id="main"></main>
-<div class="tools">
-  <div class="stat" id="histbar" style="margin-top:6px"></div>
-  <div id="savewarn" role="alert"></div><div class="stat" id="testhist" style="margin-top:2px"></div>
-  <details class="filters" id="filters"><summary>出題範囲を絞り込む(<span id="fcount"></span>)</summary>
-    <div class="fgrid">
-      <div class="frow"><span class="lab">章</span><span id="fchap" class="frow"></span></div>
-      <div class="frow"><span class="lab">重要度</span><span id="fimp" class="frow"></span></div>
-      <div class="frow"><span class="lab">状態</span>
-        <select id="fstat" aria-label="状態"><option value="all">すべて</option><option value="unseen">未回答</option><option value="review">要復習(△・×)</option><option value="done">○のみ</option></select>
-        <span class="lab" style="width:auto;margin-left:8px">順序</span>
-        <select id="ford" aria-label="順序"><option value="seq">問題番号順</option><option value="rand">ランダム</option></select>
-      </div>
-    </div>
-  </details>
-  <details class="filters" id="board"><summary>章ごとの進捗</summary><div class="fgrid"><p class="hint" style="margin:0">各章に記述／語句／カードの成績を併記しています（上の段とバーは今のモード）。章をタップすると、その章だけに絞り込みます。</p><div id="bgrid"></div></div></details>
-</div>
+<section class="panel" id="managementPanel">
+  <div class="field-label">学習状況（全<span id="total2"></span>問）</div>
+  <div class="stat-legend"><span id="stat"></span></div>
+  <div id="histbar"></div>
+  <div id="testhist"></div>
+  <div class="tools-row">
+    <button class="tool-btn" id="test" type="button">🎲 ミニテスト</button>
+    <button class="tool-btn" id="shuf" type="button">シャッフル</button>
+  </div>
+  <div class="tools-row">
+    <button class="tool-btn" id="exp" type="button">成績を書き出す（バックアップ）</button>
+    <button class="tool-btn" id="imp" type="button">成績を読み込む</button>
+    <input type="file" id="impf" accept="application/json,.json" hidden>
+  </div>
+  <div class="field-label" style="margin-top:16px">章ごとの進捗（タップでその章に移動）</div>
+  <p class="board-hint">各章に記述／語句／カードの成績を併記しています（上の段とバーは今のモード）。</p>
+  <div id="bgrid"></div>
+  <div class="reset-row"><button class="tool-btn danger" id="btnReset" type="button">進捗をリセット</button></div>
+</section>
 
-<p class="foot">出典:管理会計論 論文対策集−理論①②(2026年目標)。問題文・解答・キーワード・ロジカルフローを収録し、解説は本文のみ、図表・表は省略しています。成績はこのブラウザに保存されます。<br><button class="linkbtn" id="exp">成績を書き出す（バックアップ）</button>／<button class="linkbtn" id="imp">成績を読み込む</button><input type="file" id="impf" accept="application/json,.json" hidden></p>
+<footer class="note">出典：管理会計論 論文対策集−理論①②（2026年目標）。問題文・解答・キーワード・ロジカルフローを収録し、解説は本文のみ、図表・表は省略しています。成績はこのブラウザに保存されます。</footer>
 </div>
 
 <script>
@@ -244,7 +324,7 @@ function meter(){
   const n=DATA.length;
   $("#meter").innerHTML=`<i class="m-o" style="width:${o/n*100}%"></i><i class="m-t" style="width:${t/n*100}%"></i><i class="m-x" style="width:${x/n*100}%"></i>`;
   $("#stat").textContent=`○${o}  △${t}  ×${x}  未${n-o-t-x}`;
-  renderBoard(m);renderHist();
+  renderBoard(m);renderHist();renderSummary();
 }
 function renderHist(){
   const h=$("#histbar");if(!h)return;
@@ -277,10 +357,10 @@ function setGrade(id,g){const m=st.mode==="list"?"write":st.mode;if(st.prog[m][i
 /* ---------- shared pieces ---------- */
 function head(d){return `<div class="crumb"><span class="pid">問題${esc(d.id)}</span><span>第${d.c}章 ${esc(CH[d.c])}</span><span class="badge ${d.i==="A"?"hi":""}">重要度${d.i}</span><span class="badge">典型度${d.y}</span></div><h2 class="ptitle">${esc(d.t)}</h2>`}
 function qbox(d){return `<div class="qtext">${d.q.map(p=>`<p>${esc(p)}</p>`).join("")}</div>`}
-function nav(){const n=st.queue.length;return `<div class="nav"><button class="btn" id="prev" ${st.pos<=0?"disabled":""}>← 前へ</button><span class="pos">${n?st.pos+1:0} / ${n}</span><button class="btn primary" id="next" ${st.pos>=n-1?"disabled":""}>次へ →</button></div>`}
+function nav(){const n=st.queue.length;return `<div class="nav"><button class="btn" id="prev" ${st.pos<=0?"disabled":""}>← 前へ</button><span class="pos">${n?st.pos+1:0} / ${n}</span><button class="btn" id="shufNav">シャッフル</button><button class="btn primary" id="next" ${st.pos>=n-1?"disabled":""}>次へ →</button></div>`}
 function gradeBar(id){const g=prog(id);return `<div class="grade"><b style="font-size:13px">自己採点</b><button class="btn" data-g="o" aria-pressed="${g==="o"}">○ できた</button><button class="btn" data-g="t" aria-pressed="${g==="t"}">△ あいまい</button><button class="btn" data-g="x" aria-pressed="${g==="x"}">× できない</button></div>`}
 function bindGrade(id){document.querySelectorAll(".grade .btn").forEach(b=>b.onclick=()=>{setGrade(id,b.dataset.g);document.querySelectorAll(".grade .btn").forEach(x=>x.setAttribute("aria-pressed",String(prog(id)===x.dataset.g)));})}
-function bindNav(){const p=$("#prev"),n=$("#next");if(p)p.onclick=()=>{if(st.pos>0){st.pos--;render();scrollTop()}};if(n)n.onclick=()=>{if(st.pos<st.queue.length-1){st.pos++;render();scrollTop()}}}
+function bindNav(){const p=$("#prev"),n=$("#next");if(p)p.onclick=()=>{if(st.pos>0){st.pos--;render();scrollTop()}};if(n)n.onclick=()=>{if(st.pos<st.queue.length-1){st.pos++;render();scrollTop()}};const sf=$("#shufNav");if(sf)sf.onclick=()=>{st.test=null;st.review=null;st.ord="rand";syncFilters();buildQueue();render();scrollTop()}}
 function scrollTop(){window.scrollTo({top:0})}
 function imgs(d){if(!d.f)return "";if(!IMGS)loadImgs();const src=IMGS&&IMGS[d.f]?IMGS[d.f]:"";return `<div class="sec flow"><h3>ロジカルフロー</h3><img class="zoomable" loading="lazy" data-f="${esc(d.f)}" alt="問題${esc(d.id)}のロジカルフロー" src="${src}"><p class="zhint">${src?"画像をタップすると拡大します":"図を読み込み中です。開かない場合は、通信環境のよい場所で開き直してください"}</p></div>`}
 function extras(d){
@@ -471,7 +551,7 @@ document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{st.test=null;st.revi
 function syncFilters(){
   document.querySelectorAll("#fchap .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.c==="all"?!st.chaps.size:st.chaps.has(+c.dataset.c))));
   document.querySelectorAll("#fimp .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.i==="all"?!st.imps.size:st.imps.has(c.dataset.i))));
-  $("#fstat").value=st.stat;$("#ford").value=st.ord;
+  $("#fstat").value=st.stat;$("#ford").value=st.ord;renderFilterSummary();
 }
 function initFilters(){
   $("#fchap").innerHTML=`<button class="chip" data-c="all">全章</button>`+Object.keys(CH).map(c=>`<button class="chip" data-c="${c}" title="${esc(CH[c])}">第${c}章</button>`).join("");
@@ -480,6 +560,55 @@ function initFilters(){
   document.querySelectorAll("#fimp .chip").forEach(c=>c.onclick=()=>{const v=c.dataset.i;if(v==="all")st.imps.clear();else st.imps.has(v)?st.imps.delete(v):st.imps.add(v);syncFilters();buildQueue();render()});
   $("#fstat").onchange=e=>{st.stat=e.target.value;buildQueue();render()};
   $("#ford").onchange=e=>{st.ord=e.target.value;buildQueue();render()};
+}
+
+
+/* ---------- layout unify 2026-11-26: summary panel / resume / filter summary ---------- */
+const RESUME_SESS=savedSess;
+function dueCounts(){return {w:dueList("write").length,c:dueList("cloze").length,f:dueList("flash").length}}
+function renderSummary(){
+  const pc=$("#progressCount");if(!pc)return;
+  const m=st.mode==="list"?"write":st.mode;let o=0,t2=0,x=0;
+  DATA.forEach(d=>{const g=st.prog[m][d.id];if(g==="o")o++;else if(g==="t")t2++;else if(g==="x")x++});
+  pc.textContent=(o+t2+x)+" / "+DATA.length;
+  const days=st.days||{};const td=todayStr();
+  const el=$("#studyToday");if(el)el.textContent=days[td]?Object.keys(days[td]).length:0;
+  let streak=0;let cur=td;if(!(days[cur]&&Object.keys(days[cur]).length))cur=addDays(td,-1);
+  while(days[cur]&&Object.keys(days[cur]).length){streak++;cur=addDays(cur,-1)}
+  const es=$("#studyStreak");if(es)es.textContent=streak;
+  const dc=dueCounts();const total=dc.w+dc.c+dc.f;
+  const ed=$("#studyDue");if(ed)ed.textContent=total;
+  const dn=$("#dueCount");if(dn)dn.textContent=total;
+  const bd=$("#btnDue");if(bd)bd.disabled=!total;
+  const br=$("#btnResume");
+  if(br){
+    if(RESUME_SESS&&RESUME_SESS.cur){
+      const mn={write:"記述",cloze:"語句",flash:"カード",list:"一覧"}[RESUME_SESS.mode]||"記述";
+      br.hidden=false;br.textContent="▶ 続きから再開（"+mn+"・問題"+RESUME_SESS.cur+"）";
+    }else{br.hidden=true}
+  }
+}
+function renderFilterSummary(){
+  const el=$("#filterSummary");if(!el)return;
+  const ch=st.chaps.size?("第"+[...st.chaps].sort((a,b)=>a-b).join("章・第")+"章"):"全章";
+  const im=st.imps.size?("重要度"+[...st.imps].join("・")):"全重要度";
+  const stm={all:"すべて",unseen:"未回答",review:"要復習",done:"○のみ"}[st.stat]||"すべて";
+  el.textContent=ch+" ・ "+im+" ・ "+stm+"（対象 "+st.queue.length+"問）";
+}
+function applyResume(){
+  const s=RESUME_SESS;if(!s)return;
+  st.test=null;st.review=null;
+  if(["write","cloze","flash","list"].includes(s.mode))st.mode=s.mode;
+  if(Array.isArray(s.chaps))st.chaps=new Set(s.chaps.filter(c=>CH[c]));
+  if(Array.isArray(s.imps))st.imps=new Set(s.imps.filter(i=>["A","B","C"].includes(i)));
+  if(["all","unseen","review","done"].includes(s.stat))st.stat=s.stat;
+  if(["seq","rand"].includes(s.ord))st.ord=s.ord;
+  if(typeof s.search==="string")st.search=s.search;
+  setMode(st.mode);syncFilters();
+  const q=s.queue;
+  if(Array.isArray(q)&&q.length&&q.every(id=>byId[id])){st.queue=q.slice();st.pos=Math.min(Math.max(0,s.pos|0),q.length-1);$("#fcount").textContent="対象 "+q.length+"問"}
+  else{buildQueue();if(s.cur&&st.queue.includes(s.cur))st.pos=st.queue.indexOf(s.cur)}
+  render();scrollTop();
 }
 
 /* ---------- image zoom ---------- */
@@ -540,6 +669,26 @@ if(savedSess){
   else{buildQueue();if(savedSess.cur&&st.queue.includes(savedSess.cur))st.pos=st.queue.indexOf(savedSess.cur)}
   render();
 }else{syncFilters();buildQueue();render();}
+
+/* ---------- layout unify 2026-11-26: panel wiring ---------- */
+(function(){
+  const ft=$("#filterToggle"),fp=$("#filterPanel");
+  if(ft&&fp)ft.onclick=()=>{const open=fp.hidden;fp.hidden=!open;ft.setAttribute("aria-expanded",String(open))};
+  const bd=$("#btnDue");
+  if(bd)bd.onclick=()=>{
+    if(st.review&&st.review.active){const cp=$("#cardPanel");if(cp)cp.scrollIntoView();return}
+    const dc=dueCounts();
+    const cur=st.mode==="list"?"write":st.mode;
+    const first=dc.w?"write":dc.c?"cloze":dc.f?"flash":null;
+    const target=({write:dc.w,cloze:dc.c,flash:dc.f}[cur])?cur:first;
+    if(target)startReview(target);
+  };
+  const br=$("#btnResume");if(br)br.onclick=applyResume;
+  const rs=$("#btnReset");
+  if(rs)rs.onclick=()=>{if(confirm("学習の進捗・下書き・履歴をすべて消去します。よろしいですか？（問題データは消えません）")){try{localStorage.removeItem(KEY)}catch(e){}location.reload()}};
+  const t2=$("#total2");if(t2)t2.textContent=DATA.length;
+  renderSummary();renderFilterSummary();
+})();
 </script>
 
 <script>
