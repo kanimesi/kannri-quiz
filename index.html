@@ -1,26 +1,18 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="claude:viewport-fit-sides" content="cover"><title>管理会計論 論文対策集 一問一答</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho:wght@500;700&display=swap"><style>html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho:wght@500;700&display=swap"><style>html{color-scheme:dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
 <style>
+/* Dark theme fixed 2026-11-27: light theme removed; :root carries the dark (orange accent) palette unconditionally, with no OS-theme or attribute branching. */
 /* Layout: sticky mode bar on top, filter drawer, one large question card at a time (reading width ~760px). */
 :root{
-  --bg:#fdf3e7; --surface:#ffffff; --surface2:#ffedd5; --ink:#2b2118; --muted:#7d6a58; --line:#eedcbd;
-  --accent:#c2410c; --accent-ink:#ffffff; --accent-soft:#ffedd5;
-  --mark:#ffe1a1; --blank:#fff6d6; --blank-line:#d97706;
-  --ok:#1b7a4b; --ok-soft:#dff3e8; --warn:#9a6700; --warn-soft:#fff1d0; --bad:#b0362e; --bad-soft:#fbe3e0;
+  --bg:#1d130a; --surface:#2b1d10; --surface2:#3d2b16; --ink:#f7ead7; --muted:#c9ab8d; --line:#4e3a24;
+  --accent:#fb923c; --accent-ink:#2b1703; --accent-soft:#472a0d;
+  --mark:#6e4a10; --blank:#3a3314; --blank-line:#f59e0b;
+  --ok:#59c58c; --ok-soft:#173526; --warn:#e0b44f; --warn-soft:#3b2f10; --bad:#f08077; --bad-soft:#42201d;
+  color-scheme:dark;
   --f-ui:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Noto Sans CJK JP","Yu Gothic",sans-serif;
   --f-doc:"Shippori Mincho","Hiragino Mincho ProN","Noto Serif CJK JP","Yu Mincho",serif;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#1d130a; --surface:#2b1d10; --surface2:#3d2b16; --ink:#f7ead7; --muted:#c9ab8d; --line:#4e3a24;
-  --accent:#fb923c; --accent-ink:#2b1703; --accent-soft:#472a0d;
-  --mark:#6e4a10; --blank:#3a3314; --blank-line:#d97706;
-  --ok:#59c58c; --ok-soft:#173526; --warn:#e0b44f; --warn-soft:#3b2f10; --bad:#f08077; --bad-soft:#42201d; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#1d130a; --surface:#2b1d10; --surface2:#3d2b16; --ink:#f7ead7; --muted:#c9ab8d; --line:#4e3a24;
-  --accent:#fb923c; --accent-ink:#2b1703; --accent-soft:#472a0d;
-  --mark:#6e4a10; --blank:#3a3314; --blank-line:#d97706;
-  --ok:#59c58c; --ok-soft:#173526; --warn:#e0b44f; --warn-soft:#3b2f10; --bad:#f08077; --bad-soft:#42201d; color-scheme:dark}
 .brow .bpall{grid-column:1/-1;display:block;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 #savewarn{color:var(--bad);font-weight:700;font-size:13px;margin-top:6px}
 #savewarn:empty{display:none}
@@ -145,7 +137,7 @@ details.sec>summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ac
 .zhint{font-size:12px;color:var(--muted);margin:6px 0 0}
 #lb{position:fixed;inset:0;z-index:50;background:rgba(10,14,20,.92);display:flex;flex-direction:column}
 #lb .lbbar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px max(16px,env(safe-area-inset-left,0px)) 8px;padding-top:calc(10px + env(safe-area-inset-top,0px));color:#f7ead7;font-size:13px}
-#lb .lbbar .btn{background:#f7ead7;color:#1d130a;border-color:#f7ead7;min-height:40px;padding:6px 12px;white-space:nowrap}
+#lb .lbbar .btn{background:var(--surface2);color:var(--ink);border-color:var(--line);min-height:40px;padding:6px 12px;white-space:nowrap}
 #lb .lbscroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:0 8px calc(16px + env(safe-area-inset-bottom,0px))}
 #lb img{display:block;width:min(860px,max(640px,calc(100vw - 16px)));max-width:none;height:auto;background:#fff;border-radius:6px}
 .brow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:5px;cursor:pointer}
@@ -170,7 +162,7 @@ header.top{position:static;text-align:center;padding:20px 8px 14px;border-bottom
 header.top .eyebrow{font-size:11px;letter-spacing:.28em;color:var(--accent);font-weight:700;margin-bottom:8px}
 header.top h1{font-family:var(--f-doc);font-size:22px;margin:0 0 6px;letter-spacing:.02em}
 header.top p.sub{margin:0;font-size:12.5px;color:var(--muted)}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 6px 24px rgba(120,60,10,.08);margin-top:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 6px 24px rgba(0,0,0,.4);margin-top:14px}
 .panel .field-label{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted);margin:0 0 8px 2px}
 .progress-row{display:flex;align-items:center;gap:10px}
 .progress-row .meter{flex:1}
